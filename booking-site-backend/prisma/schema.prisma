@@ -19,21 +19,22 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   bookings  Booking[]
-  reviews   Review[]
+  reviews   Review[] // Зв'язок із відгуками вже був реалізований
 }
 
 model CatalogItem {
-  id          String    @id @default(uuid())
+  id          String       @id @default(uuid())
   title       String
   description String?
-  price       Decimal   @db.Decimal(10, 2)
+  price       Decimal      @db.Decimal(10, 2)
   imageUrl    String?
-  isAvailable Boolean   @default(true)
-  category    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isAvailable Boolean      @default(true)
+  category    CarCategory? // Змінено з String? на перечислення CarCategory
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   bookings    Booking[]
   rates       Rate[]
+  reviews     Review[] // Додано зв'язок із відгуками
 }
 
 model Booking {
@@ -43,6 +44,7 @@ model Booking {
   status        BookingStatus @default(PENDING)
   totalPrice    Decimal       @db.Decimal(10, 2)
   notes         String?
+  hasReview     Boolean       @default(false) // Додано поле для відстеження відгуків
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   userId        String
@@ -66,13 +68,15 @@ model Rate {
 }
 
 model Review {
-  id        String   @id @default(uuid())
-  rating    Int      @db.SmallInt
-  comment   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String       @id @default(uuid())
+  rating        Int          @db.SmallInt
+  comment       String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  userId        String
+  catalogItemId String? // Додано поле для зв'язку з автомобілем
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  catalogItem   CatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
 }
 
 model Contact {
@@ -102,4 +106,12 @@ enum ContactType {
   ADDRESS
   WEBSITE
   SOCIAL
+}
+
+// Додано перелік для категорій автомобілів
+enum CarCategory {
+  ECONOMY
+  COMFORT
+  BUSINESS
+  ELITE
 }

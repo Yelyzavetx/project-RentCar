@@ -151,7 +151,7 @@ const updateRate = async (req, res, next) => {
     });
     
     if (!existingRate) {
-      throw new APIError('Тариф не найден', 404);
+      throw new APIError('Тариф не знайдено', 404);
     }
     
     // Оновлюємо тариф

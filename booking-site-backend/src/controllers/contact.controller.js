@@ -2,7 +2,7 @@ const prisma = require('../models/prisma');
 const { APIError } = require('../middlewares/error');
 
 /**
- * Отримання усіх контактних даних
+ * Отримання всіх контактних даних
  */
 const getAllContacts = async (req, res, next) => {
   try {
@@ -66,7 +66,7 @@ const getContactById = async (req, res, next) => {
     });
     
     if (!contact) {
-      throw new APIError('Контакт не найден', 404);
+      throw new APIError('Контакт не знайдено', 404);
     }
     
     res.status(200).json({

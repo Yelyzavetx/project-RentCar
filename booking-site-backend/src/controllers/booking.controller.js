@@ -2,54 +2,59 @@ const prisma = require('../models/prisma');
 const { APIError } = require('../middlewares/error');
 
 /**
- * Отримання усіх бронювань з можливістю фільтрації
- *
- **/
+ * Отримання всіх бронювань з можливістю фільтрації
+ */
 const getAllBookings = async (req, res, next) => {
   try {
-    const { 
-      page = 1, 
+    const {
+      page = 1,
       limit = 10,
       status,
       startDate,
       endDate,
       userId,
+      hasReview, // Доданий параметр для фільтрації за відкликанням
       sortBy = 'createdAt',
       order = 'desc'
     } = req.query;
-    
+
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     const skip = (pageNumber - 1) * limitNumber;
-    
-    // Формируем условия фильтрации
+
+    // Формуємо умови фільтрації
     const where = {};
-    
+
     if (status) {
       where.status = status;
     }
-    
+
     if (startDate) {
       where.startDate = {
         gte: new Date(startDate)
       };
     }
-    
+
     if (endDate) {
       where.endDate = {
         lte: new Date(endDate)
       };
     }
-    
+
     if (userId) {
       where.userId = userId;
     }
-    
-    // Перевіряємо роль користувача, звичайним користувачам показуємо лише їх бронювання
+
+    // Додаємо фільтрацію по наявності відгуку
+    if (hasReview !== undefined) {
+      where.hasReview = hasReview === 'true';
+    }
+
+    // Перевіряємо роль користувача, звичайним користувачам показуємо лише їхнє бронювання
     if (req.user && req.user.role !== 'ADMIN') {
       where.userId = req.user.id;
     }
-    
+
     // Отримуємо бронювання з пагінацією та фільтрацією
     const [bookings, totalBookings] = await Promise.all([
       prisma.booking.findMany({
@@ -67,15 +72,24 @@ const getAllBookings = async (req, res, next) => {
               email: true
             }
           },
-          catalogItem: true
+          catalogItem: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              price: true,
+              imageUrl: true,
+              category: true // Додаємо категорію автомобіля
+            }
+          }
         }
       }),
       prisma.booking.count({ where })
     ]);
-    
-    // Обраховуємо загальну кількість сторінок
+
+    // Обчислюємо загальну кількість сторінок
     const totalPages = Math.ceil(totalBookings / limitNumber);
-    
+
     res.status(200).json({
       status: 'success',
       results: bookings.length,
@@ -94,12 +108,12 @@ const getAllBookings = async (req, res, next) => {
 };
 
 /**
- * Отримання одного бронювання по ID
+ * Отримання одного бронювання за ID
  */
 const getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: {
@@ -110,19 +124,28 @@ const getBookingById = async (req, res, next) => {
             email: true
           }
         },
-        catalogItem: true
+        catalogItem: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            price: true,
+            imageUrl: true,
+            category: true // Додаємо категорію автомобіля
+          }
+        }
       }
     });
-    
+
     if (!booking) {
       throw new APIError('Бронювання не знайдено', 404);
     }
-    
-    // Проверяем, имеет ли пользователь доступ к этому бронированию
+
+    // Перевіряємо, чи має користувач доступ до цього бронювання
     if (req.user.role !== 'ADMIN' && booking.userId !== req.user.id) {
       throw new APIError('У вас немає доступу до цього бронювання', 403);
     }
-    
+
     res.status(200).json({
       status: 'success',
       data: booking
@@ -138,21 +161,21 @@ const getBookingById = async (req, res, next) => {
 const createBooking = async (req, res, next) => {
   try {
     const { startDate, endDate, catalogItemId, notes } = req.body;
-    
+
     // Перевіряємо, чи існує елемент каталогу
     const catalogItem = await prisma.catalogItem.findUnique({
       where: { id: catalogItemId }
     });
-    
+
     if (!catalogItem) {
       throw new APIError('Елемент каталогу не знайдено', 404);
     }
-    
+
     if (!catalogItem.isAvailable) {
       throw new APIError('Цей елемент каталогу недоступний для бронювання', 400);
     }
-    
-    // Перевіряємо, чи немає вже бронювання на ці дати
+
+    // Перевіряємо, чи вже немає бронювань на ці дати
     const overlappingBooking = await prisma.booking.findFirst({
       where: {
         catalogItemId,
@@ -165,29 +188,30 @@ const createBooking = async (req, res, next) => {
         ]
       }
     });
-    
+
     if (overlappingBooking) {
-      throw new APIError('Вже є бронювання на обрані дати', 400);
+      throw new APIError('Вже є бронювання на вибрані дати', 400);
     }
-    
-    // Розраховуємо загальну ціну
+
+    // Рассчитываем общую стоимость
     const startDateTime = new Date(startDate);
     const endDateTime = new Date(endDate);
     const days = Math.ceil((endDateTime - startDateTime) / (1000 * 60 * 60 * 24));
     const totalPrice = days * parseFloat(catalogItem.price);
-    
-    // Створюємо нове бронювання
+
+    // Создаем новое бронирование с полем hasReview
     const newBooking = await prisma.booking.create({
       data: {
         startDate: startDateTime,
         endDate: endDateTime,
         totalPrice,
         notes,
+        hasReview: false, // За замовчуванням бронювання не має відгуку
         userId: req.user.id,
         catalogItemId
       }
     });
-    
+
     res.status(201).json({
       status: 'success',
       data: newBooking
@@ -204,32 +228,32 @@ const updateBookingStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
-    // Перевіряємо, чи існує бронювання
+
+    // Проверяем, существует ли бронирование
     const existingBooking = await prisma.booking.findUnique({
       where: { id }
     });
-    
+
     if (!existingBooking) {
       throw new APIError('Бронювання не знайдено', 404);
     }
-    
+
     // Перевіряємо, чи має користувач доступ до цього бронювання
     if (req.user.role !== 'ADMIN' && existingBooking.userId !== req.user.id) {
       throw new APIError('У вас немає доступу до цього бронювання', 403);
     }
-    
-    // Користувачі могуть лише відмінити бронювання, а не змінювати його статус на інший
+
+    // Користувачі можуть лише скасувати бронювання, а не змінити статус на інший
     if (req.user.role !== 'ADMIN' && status !== 'CANCELLED') {
       throw new APIError('У вас немає прав для зміни статусу на вказаний', 403);
     }
-    
-    // Оновлюємо статус бронювання
+
+    // Обновляем статус бронирования
     const updatedBooking = await prisma.booking.update({
       where: { id },
       data: { status }
     });
-    
+
     res.status(200).json({
       status: 'success',
       data: updatedBooking
@@ -245,21 +269,21 @@ const updateBookingStatus = async (req, res, next) => {
 const deleteBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    // Перевіряємо, чи існує бронювання
+
+    // Проверяем, существует ли бронирование
     const existingBooking = await prisma.booking.findUnique({
       where: { id }
     });
-    
+
     if (!existingBooking) {
-      throw new APIError('Бронюванння не знайдено', 404);
+      throw new APIError('Бронювання не знайдено', 404);
     }
-    
-    // Видаляємо бронювання
+
+    // Удаляем бронирование
     await prisma.booking.delete({
       where: { id }
     });
-    
+
     res.status(204).send();
   } catch (error) {
     next(error);

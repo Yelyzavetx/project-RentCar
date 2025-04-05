@@ -26,16 +26,26 @@ router.get('/:id', reviewController.getReviewById);
 router.post('/', authenticate, reviewController.createReview);
 
 /**
+ * @route GET /api/reviews/catalog/:catalogItemId
+ * @desc Отримання відгуків для конкретного автомобиля
+ * @access Public
+ */
+router.get('/catalog/:catalogItemId', (req, res, next) => {
+    req.query.catalogItemId = req.params.catalogItemId;
+    reviewController.getAllReviews(req, res, next);
+});
+
+/**
  * @route PUT /api/reviews/:id
- * @desc Обновление відгуку
- * @access Private (користувачі могуть редагувати тільки свої відгуки, адміністратори - будь-які)
+ * @desc Оновлення відгуку
+ * @access Private (користувачі можуть редагувати лише свої відгуки, адміністратори - будь-які)
  */
 router.put('/:id', authenticate, reviewController.updateReview);
 
 /**
  * @route DELETE /api/reviews/:id
  * @desc Видалення відгуку
- * @access Private(користувачі могуть видаляти тільки свої відгуки, адміністратори - будь-які)
+ * @access Private (користувачі можуть видаляти лише свої відгуки, адміністратори - будь-які)
  */
 router.delete('/:id', authenticate, reviewController.deleteReview);
 

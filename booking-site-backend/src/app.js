@@ -62,7 +62,7 @@ app.get('/health', (req, res) => {
 
 // Обробка неіснуючих маршрутів
 app.use((req, res, next) => {
-  const err = new Error(`Не найдено - ${req.originalUrl}`);
+  const err = new Error(`Не знайдено - ${req.originalUrl}`);
   err.statusCode = 404;
   next(err);
 });

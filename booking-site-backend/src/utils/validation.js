@@ -2,9 +2,9 @@ const Joi = require('joi');
 const { APIError } = require('../middlewares/error');
 
 /**
- * Валидация запроса с использованием Joi
- * @param {Object} schema - Схема валидации Joi
- * @returns {Function} Middleware для валидации
+ * Валідація запиту з використанням Joi
+ * @param {Object} schema - Схема валідації Joi
+ * @returns {Function} Middleware для валідації
  */
 const validate = (schema) => (req, res, next) => {
   const validSchema = pick(schema, ['params', 'query', 'body']);
@@ -26,10 +26,10 @@ const validate = (schema) => (req, res, next) => {
 };
 
 /**
- * Создает объект, содержащий только запрошенные поля
- * @param {Object} object - Исходный объект
- * @param {string[]} keys - Ключи, которые нужно извлечь
- * @returns {Object} Новый объект с извлеченными ключами
+ * Створює об'єкт, який містить лише запитані поля
+ * @param {Object} object - Вихідний об'єкт
+ * @param {string[]} keys - Ключі, які потрібно отримати
+ * @returns {Object} Новий об'єкт із витягнутими ключами
  */
 const pick = (object, keys) => {
   return keys.reduce((obj, key) => {
