@@ -12,13 +12,13 @@ const authenticate = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new APIError('Не предоставлений токен аутентифікації', 401);
+      throw new APIError('Не наданий токен аутентифікації', 401);
     }
     
     const token = authHeader.split(' ')[1];
     
     if (!token) {
-      throw new APIError('Не предоставлений токен аутентифікації', 401);
+      throw new APIError('Не наданий токен аутентифікації', 401);
     }
     
     // Верифікуємо JWT токен

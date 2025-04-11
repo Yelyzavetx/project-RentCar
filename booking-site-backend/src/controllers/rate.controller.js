@@ -6,25 +6,25 @@ const { APIError } = require('../middlewares/error');
  */
 const getAllRates = async (req, res, next) => {
   try {
-    const { 
-      page = 1, 
+    const {
+      page = 1,
       limit = 10,
       catalogItemId,
       sortBy = 'createdAt',
       order = 'desc'
     } = req.query;
-    
+
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     const skip = (pageNumber - 1) * limitNumber;
-    
+
     // Формуємо умови фільтрації
     const where = {};
-    
+
     if (catalogItemId) {
       where.catalogItemId = catalogItemId;
     }
-    
+
     // Отримуємо тарифи з пагінацією та фільтрацією
     const [rates, totalRates] = await Promise.all([
       prisma.rate.findMany({
@@ -45,10 +45,10 @@ const getAllRates = async (req, res, next) => {
       }),
       prisma.rate.count({ where })
     ]);
-    
+
     // Обраховуємо загальну кількість сторінок
     const totalPages = Math.ceil(totalRates / limitNumber);
-    
+
     res.status(200).json({
       status: 'success',
       results: rates.length,
@@ -72,7 +72,7 @@ const getAllRates = async (req, res, next) => {
 const getRateById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     const rate = await prisma.rate.findUnique({
       where: { id },
       include: {
@@ -85,11 +85,11 @@ const getRateById = async (req, res, next) => {
         }
       }
     });
-    
+
     if (!rate) {
       throw new APIError('Тариф не найден', 404);
     }
-    
+
     res.status(200).json({
       status: 'success',
       data: rate
@@ -105,16 +105,16 @@ const getRateById = async (req, res, next) => {
 const createRate = async (req, res, next) => {
   try {
     const { name, description, price, validFrom, validTo, conditions, catalogItemId } = req.body;
-    
+
     // Перевіряємо, чи існує елемент каталогу
     const catalogItem = await prisma.catalogItem.findUnique({
       where: { id: catalogItemId }
     });
-    
+
     if (!catalogItem) {
       throw new APIError('Елемент каталогу не знайдено', 404);
     }
-    
+
     // Створюємо новий тариф
     const newRate = await prisma.rate.create({
       data: {
@@ -127,7 +127,7 @@ const createRate = async (req, res, next) => {
         catalogItemId
       }
     });
-    
+
     res.status(201).json({
       status: 'success',
       data: newRate
@@ -144,16 +144,16 @@ const updateRate = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, description, price, validFrom, validTo, conditions } = req.body;
-    
+
     // Перевіряємо, чи існує тариф
     const existingRate = await prisma.rate.findUnique({
       where: { id }
     });
-    
+
     if (!existingRate) {
-      throw new APIError('Тариф не найден', 404);
+      throw new APIError('Тариф не знайдено', 404);
     }
-    
+
     // Оновлюємо тариф
     const updatedRate = await prisma.rate.update({
       where: { id },
@@ -166,7 +166,7 @@ const updateRate = async (req, res, next) => {
         conditions
       }
     });
-    
+
     res.status(200).json({
       status: 'success',
       data: updatedRate
@@ -182,21 +182,21 @@ const updateRate = async (req, res, next) => {
 const deleteRate = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     // Перевіряємо, чи існує тариф
     const existingRate = await prisma.rate.findUnique({
       where: { id }
     });
-    
+
     if (!existingRate) {
       throw new APIError('Тариф не знайдено', 404);
     }
-    
+
     // Видаляємо тариф
     await prisma.rate.delete({
       where: { id }
     });
-    
+
     res.status(204).send();
   } catch (error) {
     next(error);

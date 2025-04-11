@@ -39,4 +39,11 @@ router.patch('/:id/status', authenticate, bookingController.updateBookingStatus)
  */
 router.delete('/:id', authenticate, authorize('ADMIN'), bookingController.deleteBooking);
 
+/**
+ * @route POST /api/bookings/check-availability
+ * @desc Проверка доступности дат для бронирования
+ * @access Private
+ */
+router.post('/check-availability', authenticate, bookingController.checkAvailability);
+
 module.exports = router;
